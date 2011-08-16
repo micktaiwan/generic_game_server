@@ -1,0 +1,28 @@
+Generic game server
+===================
+
+Alpha state. For now, I'm just testing ZeroMQ.
+
+Generic Game Server in Ruby using ZeroMQ.
+First implementing Dobble (a little game I like),
+and then AntBattle maybe (a AI game I like a lot).
+
+The generic game server list games and game tables.
+Players can open a table for different type of games, and play.
+
+Developpers just have to write game class and client
+
+Installation
+============
+
+Depends on ZeroMQ:
+http://www.zeromq.org/
+
+Usage
+=====
+
+each game server is in own directory
+
+# loads the server
+ruby main.rb
+
