@@ -9,6 +9,7 @@ class GameServer
   include Utils
 
   def initialize
+    puts "zmq version #{ZMQ::version.join('.')}"
     @tables       = []
     @taken_ports  = []
     @server_port  = 5000
@@ -27,22 +28,30 @@ class GameServer
 
   def listen
     while true
-      command = @socket.recv
-      if command[0..7] == "NEWTABLE" # NEWTABLE gamename
-        port = get_port
-        name = command[9..-1]
-        @socket.send("ERROR Game #{name} does not exists") and next if !@games.include?(name)
-        instance = get_game_instance(name)
-        @socket.send("ERROR Error in game #{name}: #{instance}") and next if instance.class.to_s != name
-        @tables << GameTable.new(port, instance)
-        @socket.send("CREATED #{port} #{name}")
-        log("Created a new table for #{name}")
-      elsif command == "EXIT" # FIXME: any client can shutdown the server
-        break
-      else
-        @socket.send("unknown command " + command)
+      begin
+        command = @socket.recv
+        if command[0..7] == "NEWTABLE" # NEWTABLE gamename
+          port = get_port
+          name = command[9..-1]
+          @socket.send("ERROR Game #{name} does not exists") and next if !@games.include?(name)
+          instance = get_game_instance(name)
+          @socket.send("ERROR Error in game #{name}: #{instance}") and next if instance.class.to_s != name
+          @tables << GameTable.new(port, instance)
+          @socket.send("CREATED #{port} #{name}")
+          log("Created a new table for #{name}")
+        elsif command[0..3] == "NAME" # a client gives us its friendly name
+          @socket.send("NAME")
+          log("#{command[5..-1]} gave his name")
+        #elsif command == "EXIT" # FIXME: any client can shutdown the server
+        #  break
+        else
+          @socket.send("unknown command " + command)
+        end
+      rescue Exception => e
+        log(e.message)
+        raise e
       end
-    end
+    end # loop
   end
 
   def get_port
@@ -79,5 +88,9 @@ class GameTable
     @socket.bind("tcp://*:#{port}")
   end
 
+end
+
+if __FILE__ == $0
+  puts "This file does nothing itself. You have to derive a new server from it. See main.rb"
 end
 

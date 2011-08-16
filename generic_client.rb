@@ -1,29 +1,24 @@
 require 'rubygems'
 require 'zmq'
 
-class Client
+class GenericClient
 
-  def initialize
+  def initialize(name="Generic client")
     @context = ZMQ::Context.new
     @socket = @context.socket(ZMQ::REQ)
     @server_ip = "localhost"
+    @client_name = name
   end
 
   def connect
-    @socket.connect("tcp://#{@server_ip}:5000")
-  end
-
-  # FIXME: just or testing
-  def talk
-    @socket.send("NEWTABLE Dobble")
-    puts @socket.recv
-    #@socket.send("EXIT")
+    @socket.connect("tcp://#@server_ip:5000")
+    @socket.send("NAME #@client_name")
+    @socket.recv
   end
 
 end
 
-# FIXME: not generic at all :)
-c = Client.new
-c.connect
-c.talk
+if __FILE__ == $0
+  puts "This file does nothing itself. You have to derive a new client from it."
+end
 
