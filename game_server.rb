@@ -30,8 +30,9 @@ class GameServer
   end
 
   def close
-    #@context.terminate
-    # TODO: cloase all tables
+    @socket.close
+    @tables.each { |t| t.close }
+    @context.terminate
   end
 
   def listen
@@ -108,6 +109,7 @@ class GameTable
   def initialize(port)
     @port           = port
     @table_name     = "No name"
+    @socket         = nil
   end
 
   def listen
@@ -132,6 +134,10 @@ class GameTable
 
   def process
     raise "process needs to be overridden"
+  end
+
+  def close
+    @socket.close if @socket
   end
 
 end

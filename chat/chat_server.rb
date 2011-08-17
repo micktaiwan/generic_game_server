@@ -5,6 +5,8 @@ class Chat < GameTable
     @game_type  = "Chat"
     @nb_port    = 2
     @context    = ZMQ::Context.new
+    @puller     = nil
+    @publisher  = nil
   end
 
   def listen
@@ -26,6 +28,12 @@ class Chat < GameTable
 
   def process(command)
     @socket.send_string("Chat server: unknown command '#{command}'")
+  end
+
+  def close
+    super
+    @puller.close if @puller
+    @publisher.close if @publisher
   end
 
 end
