@@ -1,5 +1,7 @@
+# prerequisites:
+# sudo gem install ffi ffi-rzmq
 require 'rubygems'
-require 'zmq'
+require 'ffi-rzmq'
 require 'utils'
 
 # a game server launches as many as GameTable as necessary
@@ -9,11 +11,12 @@ class GameServer
   include Utils
 
   def initialize
-    puts "zmq version #{ZMQ::version.join('.')}"
+    puts "ffi-rzmq version #{ZMQ::version}"
     @tables       = []
     @taken_ports  = []
     @server_port  = 5000
-    @games        = {
+    @games        = { # TODO: put this in a config file or do it automatically
+      'Chat'=>'chat/chat_server.rb',
       'Dobble'=>'dobble/dobble_server.rb'
       }
     @games.each { |key, value|
@@ -21,31 +24,43 @@ class GameServer
       load value
       }
     @context = ZMQ::Context.new
-    @socket = @context.socket(ZMQ::REP)
+    @socket = @context.socket(ZMQ::REP)  # FIXME: so we have to close sockets ?
     @socket.bind("tcp://*:#@server_port")
     puts "Loaded all games. Listening for client commands."
+  end
+
+  def close
+    #@context.terminate
+    # TODO: cloase all tables
   end
 
   def listen
     while true
       begin
-        command = @socket.recv
+        command = @socket.recv_string
+        puts "GameServer: #{command}"
+        #log "id: #{@socket.getsockopt(ZMQ::IDENTITY)}"
         if command[0..7] == "NEWTABLE" # NEWTABLE gamename
           port = get_port
           name = command[9..-1]
-          @socket.send("ERROR Game #{name} does not exists") and next if !@games.include?(name)
+          @socket.send_string("ERROR Game #{name} does not exists") and next if !@games.include?(name)
           instance = get_game_instance(name)
-          @socket.send("ERROR Error in game #{name}: #{instance}") and next if instance.class.to_s != name
-          @tables << GameTable.new(port, instance)
-          @socket.send("CREATED #{port} #{name}")
+          @socket.send_string("ERROR Error in game #{name}: #{instance}") and next if instance.class.to_s != name
+          table = GameTable.new(port, instance)
+          @tables << table
+          table.listen
+          @socket.send_string("CREATED #{port} #{name}")
           log("Created a new table for #{name}")
-        elsif command[0..3] == "NAME" # a client gives us its friendly name
-          @socket.send("NAME")
-          log("#{command[5..-1]} gave his name")
+        elsif command == "LISTTABLES"
+          @socket.send_string("TABLES #{tables_names}")
+        elsif command[0..9] == "CLIENTNAME" # a client gives us its friendly name
+          @socket.send_string("CLIENTNAME")
+          # TODO: use it :)
+          log("#{command[10..-1]} gave his name")
         #elsif command == "EXIT" # FIXME: any client can shutdown the server
         #  break
         else
-          @socket.send("unknown command " + command)
+          @socket.send_string("unknown command " + command)
         end
       rescue Exception => e
         log(e.message)
@@ -65,6 +80,10 @@ class GameServer
     port
   end
 
+  def tables_names
+    @tables.map { |t| "#{t.game_instance.game_type}:#{t.table_name}" }.join(", ")
+  end
+
   def get_game_instance(class_name)
     begin
       return eval("#{class_name}.new")
@@ -81,11 +100,32 @@ end
 class GameTable
   # TODO: kills itself when no more clients
 
+  attr_accessor :game_instance, :table_name
+
   def initialize(port, game_instance)
     @game_instance  = game_instance
-    @context        = ZMQ::Context.new
-    @socket         = @context.socket(ZMQ::REP)
-    @socket.bind("tcp://*:#{port}")
+    @port           = port
+    @table_name     = "No name"
+  end
+
+  def listen
+    Thread.new do
+      context        = ZMQ::Context.new
+      socket         = context.socket(ZMQ::REP)
+      socket.bind("tcp://*:#@port") # FIXME: so we have to close sockets ?
+      while true
+        puts "Table listening..."
+        command = socket.recv_string
+        puts "GameTable command: #{command}"
+        if command[0..5] == "RENAME"
+          @table_name = command[7..-1]
+          socket.send_string("RENAME OK")
+        else
+          @game_instance.process(command)
+        end
+        break if command == "DESTROY"
+      end # loop
+    end # thread
   end
 
 end

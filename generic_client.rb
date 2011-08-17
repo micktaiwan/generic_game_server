@@ -1,19 +1,28 @@
 require 'rubygems'
-require 'zmq'
+require 'ffi-rzmq'
 
 class GenericClient
 
   def initialize(name="Generic client")
-    @context = ZMQ::Context.new
-    @socket = @context.socket(ZMQ::REQ)
-    @server_ip = "localhost"
-    @client_name = name
+    @context        = ZMQ::Context.new
+    @server_socket  = @context.socket(ZMQ::REQ)
+    @server_ip      = "localhost"
+    @server_port    = 5000
+    @client_name    = name
   end
 
   def connect
-    @socket.connect("tcp://#@server_ip:5000")
-    @socket.send("NAME #@client_name")
-    @socket.recv
+    @server_socket.connect("tcp://#@server_ip:#@server_port")
+    @server_socket.send_string("CLIENTNAME #@client_name")
+    @server_socket.recv_string
+  end
+
+  def request_all_game_tables
+    @server_socket.send_string("LISTTABLES")
+  end
+
+  def recv_string
+    @server_socket.recv_string
   end
 
 end

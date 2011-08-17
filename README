@@ -18,6 +18,10 @@ Installation
 Depends on ZeroMQ:
 http://www.zeromq.org/
 
+prerequisites:
+sudo gem install ffi ffi-rzmq
+
+
 Usage
 =====
 
