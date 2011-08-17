@@ -23,10 +23,8 @@ class ChatDisplay < ChatBase
 
 end
 
-name = ARGV[0]
-name = "ChatDisplay" if not name
-c = ChatDisplay.new(name)
+c = ChatDisplay.new("ChatDisplay")
 c.connect
-c.connect_to_table("Lobby")
+c.connect_to_table("Lobby") # FIXME: must be the first table on port 5001 (5003 for display)
 c.loop
 

@@ -30,3 +30,7 @@ class Chat < GameTable
 
 end
 
+if __FILE__ == $0
+  puts "This file does nothing itself. run ../main.rb"
+end
+
