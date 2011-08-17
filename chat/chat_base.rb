@@ -1,4 +1,4 @@
-require '../generic_client'
+require '../generic_client.rb'
 
 class ChatBase < GenericClient
 

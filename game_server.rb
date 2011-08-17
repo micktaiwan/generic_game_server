@@ -2,7 +2,7 @@
 # sudo gem install ffi ffi-rzmq
 require 'rubygems'
 require 'ffi-rzmq'
-require 'utils'
+require './utils.rb'
 
 # a game server launches as many as GameTable as necessary
 # each of them listening of a different port

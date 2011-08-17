@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require 'chat_base'
+require './chat_base.rb'
 
 class ChatDisplay < ChatBase
 

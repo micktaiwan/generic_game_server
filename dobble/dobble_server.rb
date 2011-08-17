@@ -1,4 +1,4 @@
-require 'game_server'
+require_relative '../game_server.rb'
 
 class Dobble
 
