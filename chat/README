@@ -1,0 +1,22 @@
+Chat
+====
+
+Just a simple chat to test ZeroMQ
+
+=> start a server with
+ruby main.rb
+
+=> go into the chat directory
+cd chat
+
+=> then start a input client
+ruby chat_input.rb
+
+=> then a display client
+ruby chat_display.rb
+
+1) type your messages in the input window
+2) and see all the chat messages in the display window
+
+I know that's cumbersome.
+
