@@ -37,36 +37,36 @@ class GameServer
   def listen
     while true
       begin
-        command = @socket.recv_string
-        puts "GameServer: #{command}"
-        #log "id: #{@socket.getsockopt(ZMQ::IDENTITY)}"
-        if command[0..7] == "NEWTABLE" # NEWTABLE gamename
-          port = get_port
-          name = command[9..-1]
-          @socket.send_string("ERROR Game #{name} does not exists") and next if !@games.include?(name)
-          instance = get_game_instance(name)
-          @socket.send_string("ERROR Error in game #{name}: #{instance}") and next if instance.class.to_s != name
-          table = GameTable.new(port, instance)
-          @tables << table
-          table.listen
-          @socket.send_string("CREATED #{port} #{name}")
-          log("Created a new table for #{name}")
-        elsif command == "LISTTABLES"
-          @socket.send_string("TABLES #{tables_names}")
-        elsif command[0..9] == "CLIENTNAME" # a client gives us its friendly name
-          @socket.send_string("CLIENTNAME")
-          # TODO: use it :)
-          log("#{command[10..-1]} gave his name")
-        #elsif command == "EXIT" # FIXME: any client can shutdown the server
-        #  break
-        else
-          @socket.send_string("unknown command " + command)
-        end
+        parse(@socket.recv_string)
       rescue Exception => e
         log(e.message)
         raise e
       end
     end # loop
+  end
+
+  def parse(command)
+    puts "GameServer: #{command}"
+    #log "id: #{@socket.getsockopt(ZMQ::IDENTITY)}"
+    if command[0..7] == "NEWTABLE" # NEWTABLE gamename
+      port = get_port
+      name = command[9..-1]
+      @socket.send_string("ERROR Game #{name} does not exists") and return if !@games.include?(name)
+      table, err = get_game_instance(name, port)
+      @socket.send_string("ERROR Error in game #{name}: #{err}") and return if not table
+      @socket.send_string("CREATED #{port} #{name}")
+      log("Created a new table for #{name}")
+    elsif command == "LISTTABLES"
+      @socket.send_string("TABLES #{tables_names}")
+    elsif command[0..9] == "CLIENTNAME" # a client gives us its friendly name
+      @socket.send_string("CLIENTNAME")
+      # TODO: use it :)
+      log("#{command[10..-1]} gave his name")
+    #elsif command == "EXIT" # FIXME: any client can shutdown the server
+    #  break
+    else
+      @socket.send_string("unknown command " + command)
+    end
   end
 
   def get_port
@@ -81,18 +81,20 @@ class GameServer
   end
 
   def tables_names
-    @tables.map { |t| "#{t.game_instance.game_type}:#{t.table_name}" }.join(", ")
+    @tables.map { |t| "#{t.game_type}:#{t.table_name}" }.join(", ")
   end
 
-  def get_game_instance(class_name)
+  def get_game_instance(class_name, port)
     begin
-      return eval("#{class_name}.new")
+      table =  eval("#{class_name}.new(#{port})")
+      @tables << table
+      table.listen
+      return [table, nil]
     rescue NameError => e
-      return e.message
+      return [nil, e.message]
     rescue Exception => e
-      return e.message
+      return [nil, e.message]
     end
-
   end
 
 end
@@ -100,10 +102,10 @@ end
 class GameTable
   # TODO: kills itself when no more clients
 
-  attr_accessor :game_instance, :table_name
+  attr_accessor :table_name
+  attr_reader   :game_type, :nb_ports
 
-  def initialize(port, game_instance)
-    @game_instance  = game_instance
+  def initialize(port)
     @port           = port
     @table_name     = "No name"
   end
@@ -111,21 +113,25 @@ class GameTable
   def listen
     Thread.new do
       context        = ZMQ::Context.new
-      socket         = context.socket(ZMQ::REP)
-      socket.bind("tcp://*:#@port") # FIXME: so we have to close sockets ?
+      @socket         = context.socket(ZMQ::REP)
+      @socket.bind("tcp://*:#@port") # FIXME: so we have to close sockets ?
       while true
         puts "Table listening..."
-        command = socket.recv_string
+        command = @socket.recv_string
         puts "GameTable command: #{command}"
         if command[0..5] == "RENAME"
           @table_name = command[7..-1]
-          socket.send_string("RENAME OK")
+          @socket.send_string("RENAME OK")
         else
-          @game_instance.process(command)
+          process(command)
         end
         break if command == "DESTROY"
       end # loop
     end # thread
+  end
+
+  def process
+    raise "process needs to be overridden"
   end
 
 end

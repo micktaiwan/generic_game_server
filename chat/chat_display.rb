@@ -1,29 +1,32 @@
 #!/usr/bin/env ruby
-require '../generic_client'
+require 'chat_base'
 
-class ChatDisplay < GenericClient
+class ChatDisplay < ChatBase
 
   def intialize(name)
     super(name)
   end
 
-  def create_new_table(name)
-    @server_socket.send_string("NEWTABLE Chat")
-    @table_port     = @server_socket.recv_string.split(" ")[1].to_i
-    puts @table_port
-    @table_socket   = @context.socket(ZMQ::REQ)
-    @table_socket.connect("tcp://#@server_ip:#@table_port")
-    @table_socket.send_string("RENAME #{name}")
-    puts @table_socket.recv_string
+  def connect_to_table(name)
+    super(name)
+    @subscriber   = @context.socket(ZMQ::SUB)
+    #@subscriber.connect("tcp://#@server_ip:#{@table_port+2}") # FIXME
+    @subscriber.connect("tcp://#@server_ip:5003")
+    @subscriber.setsockopt(ZMQ::SUBSCRIBE, "")
+  end
+
+  def loop
+    while true
+      puts @subscriber.recv_string
+    end
   end
 
 end
 
 name = ARGV[0]
-name = "Chat client" if not name
+name = "ChatDisplay" if not name
 c = ChatDisplay.new(name)
 c.connect
-c.create_new_table("Lobby")
-c.request_all_game_tables
-puts c.recv_string
+c.connect_to_table("Lobby")
+c.loop
 
