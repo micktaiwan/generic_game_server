@@ -24,7 +24,7 @@ class GameServer
       load value
       }
     @context = ZMQ::Context.new
-    @socket = @context.socket(ZMQ::REP)  # FIXME: so we have to close sockets ?
+    @socket = @context.socket(ZMQ::REP)
     @socket.bind("tcp://*:#@server_port")
     puts "Loaded all games. Listening for client commands."
   end
@@ -47,7 +47,7 @@ class GameServer
   end
 
   def parse(command)
-    puts "GameServer: #{command}"
+    #log("GameServer: #{command}")
     #log "id: #{@socket.getsockopt(ZMQ::IDENTITY)}"
     if command[0..7] == "NEWTABLE" # NEWTABLE gamename
       port = get_port
@@ -63,8 +63,9 @@ class GameServer
       @socket.send_string("CLIENTNAME")
       # TODO: use it :)
       log("#{command[10..-1]} gave his name")
-    #elsif command == "EXIT" # FIXME: any client can shutdown the server
-    #  break
+    elsif command == "EXIT" # any client can shutdown the server...
+      log("Client asked for exit")
+      break
     else
       @socket.send_string("unknown command " + command)
     end
@@ -110,13 +111,14 @@ class GameTable
     @port           = port
     @table_name     = "No name"
     @socket         = nil
+    @thread         = nil
   end
 
   def listen
-    Thread.new do
+    @thread = Thread.new do
       context        = ZMQ::Context.new
       @socket         = context.socket(ZMQ::REP)
-      @socket.bind("tcp://*:#@port") # FIXME: so we have to close sockets ?
+      @socket.bind("tcp://*:#@port")
       while true
         puts "Table listening..."
         command = @socket.recv_string
@@ -137,6 +139,7 @@ class GameTable
   end
 
   def close
+    @thread.kill if @thread
     @socket.close if @socket
   end
 

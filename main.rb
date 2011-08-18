@@ -4,6 +4,8 @@ require './game_server.rb'
 Thread.abort_on_exception = true
 
 s = GameServer.new
+trap("INT") { s.close; exit } # testing....
+
 begin
   s.listen
 rescue Interrupt => e # FIXME: not catching Ctrl-C ???

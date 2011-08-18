@@ -1,0 +1,8 @@
+- clean up Chat
+- use MongoMapper to store game states ?
+  - a common db api for all games ? No, start simple...
+
+And do this to find more:
+- grep -r TODO *
+- grep -r FIXME *
+
