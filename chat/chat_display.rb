@@ -27,13 +27,12 @@ class ChatDisplay < ChatClient
     super
   end
 
-
 end
 
 begin
   c = ChatDisplay.new("localhost", 5000, "ChatDisplay")
   c.connect
-  c.connect_to_table("Lobby")
+  c.connect_to_table("Lobby fails")
   c.loop
 ensure
   c.close

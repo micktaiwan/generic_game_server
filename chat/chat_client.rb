@@ -23,12 +23,15 @@ class ChatClient < GenericClient
     request_all_game_tables
     tmp, tables = recv_string.split(' ')
     puts tables
-    return create_new_table(name) if !tables
-
-    tables = tables.split(";")
+    tables = tables.split(";") if tables
     table = get_table_by_name(tables, name)
-    if not table
-      return create_new_table(name)
+
+    if !tables or !table
+      if create_if_necessary
+        return create_new_table(name)
+      else
+        return nil
+      end
     else
       return add_table(table[:port],table[:name])
     end
@@ -37,6 +40,8 @@ class ChatClient < GenericClient
 private
 
   def get_table_by_name(tables, name)
+    return nil if !tables
+
     tables.each { |t|
       type, t = t.split('.')
       n, p = t.split(':')
