@@ -11,11 +11,11 @@ class ChatClient < GenericClient
   def create_new_table(name)
     @server_socket.send_string("NEWTABLE Chat")
     rv = @server_socket.recv_string
-    puts rv and exit if rv[0..4] == "ERROR"
+    raise rv if rv[0..4] == "ERROR"
     port     = rv.split(" ")[1].to_i
     table = add_table(port,name)
     table.table_socket.send_string("RENAME #{name}")
-    puts table.table_socket.recv_string
+    table.table_socket.recv_string
     return table
   end
 
@@ -27,7 +27,7 @@ class ChatClient < GenericClient
     # Then see if the table is already created on the server
     request_all_game_tables
     tmp, tables = recv_string.split(' ')
-    puts tables
+    #puts tables
     tables = tables.split(";") if tables
     table = get_table_by_name(tables, name)
 
@@ -56,7 +56,7 @@ private
   end
 
   def add_table(port, name)
-    puts "Adding table #{name} and connecting to #@server_ip:#{port}"
+    #puts "Adding table #{name} and connecting to #@server_ip:#{port}"
     t = ChatTable.new(@server_ip, port, name)
     @tables << t
     t

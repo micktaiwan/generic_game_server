@@ -35,6 +35,9 @@ begin
   c.connect
   c.connect_to_table("Lobby")
   c.loop
+rescue Exception=>e
+  puts e
+  puts e.backtrace
 ensure
   c.close
 end

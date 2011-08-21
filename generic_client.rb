@@ -4,17 +4,17 @@ require 'ffi-rzmq'
 class GenericClient
 
   def initialize(ip, port, name="Generic client")
-    @context        = ZMQ::Context.new
-    @server_socket  = @context.socket(ZMQ::REQ)
     @server_ip      = ip
     @server_port    = port
     @client_name    = name
   end
 
   def connect
+    @context        = ZMQ::Context.new
+    @server_socket  = @context.socket(ZMQ::REQ)
     @server_socket.connect("tcp://#@server_ip:#@server_port")
     @server_socket.send_string("CLIENTNAME #@client_name")
-    puts @server_socket.recv_string
+    return @server_socket.recv_string
   end
 
   def request_all_game_tables
@@ -26,8 +26,8 @@ class GenericClient
   end
 
   def close
-    @server_socket.close
-    @context.terminate
+    @server_socket.close if @server_socket
+    @context.terminate if @context
   end
 
 end
