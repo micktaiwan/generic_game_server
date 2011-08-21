@@ -3,18 +3,19 @@
 require 'rubygems'
 require 'ffi-rzmq'
 require './utils.rb'
+require './game_table.rb'
 
-# a game server launches as many as GameTable as necessary
+# a game server launches as many as GameTableServer as necessary
 # each of them listening of a different port
 class GameServer
 
   include Utils
 
-  def initialize
+  def initialize(port)
     puts "ffi-rzmq version #{ZMQ::version}"
     @tables       = []
     @taken_ports  = []
-    @server_port  = 5000
+    @server_port  = port
     @games        = { # TODO: put this in a config file or do it automatically
       'Chat'=>'chat/chat_server.rb',
       'Dobble'=>'dobble/dobble_server.rb'
@@ -37,12 +38,7 @@ class GameServer
 
   def listen
     while true
-      begin
-        parse(@socket.recv_string)
-      rescue Exception => e
-        log(e.message)
-        raise e
-      end
+      parse(@socket.recv_string)
     end # loop
   end
 
@@ -50,13 +46,16 @@ class GameServer
     #log("GameServer: #{command}")
     #log "id: #{@socket.getsockopt(ZMQ::IDENTITY)}"
     if command[0..7] == "NEWTABLE" # NEWTABLE gamename
-      port = get_port
       name = command[9..-1]
       @socket.send_string("ERROR Game #{name} does not exists") and return if !@games.include?(name)
-      table, err = get_game_instance(name, port)
-      @socket.send_string("ERROR Error in game #{name}: #{err}") and return if not table
-      @socket.send_string("CREATED #{port} #{name}")
-      log("Created a new table for #{name}")
+      table, err = get_game_instance(name)
+      if not table
+        @socket.send_string("ERROR Error in game #{name}: #{err}")
+        log("Error in game #{name}: #{err}")
+        return
+      end
+      @socket.send_string("CREATED #{table.port} #{name}")
+      log("Generic Server: Created a new table for #{name} on port #{table.port}")
     elsif command == "LISTTABLES"
       @socket.send_string("TABLES #{tables_names}")
     elsif command[0..9] == "CLIENTNAME" # a client gives us its friendly name
@@ -72,6 +71,7 @@ class GameServer
   end
 
   def get_port
+    # FIXME: horrible....
     i = 0
     begin
       i += 1
@@ -83,12 +83,21 @@ class GameServer
   end
 
   def tables_names
-    @tables.map { |t| "#{t.game_type}:#{t.table_name}" }.join(", ")
+    @tables.map { |t| "#{t.game_type}.#{t.name}:#{t.port}" }.join(";")
   end
 
-  def get_game_instance(class_name, port)
+  def add_taken_ports(from, nb)
+    p = from
+    for i in (1..nb)
+      @taken_ports << p+i
+    end
+  end
+
+  def get_game_instance(class_name)
+    port = get_port
     begin
-      table =  eval("#{class_name}.new(#{port})")
+      table =  eval("#{class_name}.new(#{port}, #{class_name})")
+      add_taken_ports(port, table.nb_ports)
       @tables << table
       table.listen
       return [table, nil]
@@ -101,51 +110,7 @@ class GameServer
 
 end
 
-class GameTable
-  # TODO: kills itself when no more clients
-
-  attr_accessor :table_name
-  attr_reader   :game_type, :nb_ports
-
-  def initialize(port)
-    @port           = port
-    @table_name     = "No name"
-    @socket         = nil
-    @thread         = nil
-  end
-
-  def listen
-    @thread = Thread.new do
-      context        = ZMQ::Context.new
-      @socket         = context.socket(ZMQ::REP)
-      @socket.bind("tcp://*:#@port")
-      while true
-        puts "Table listening..."
-        command = @socket.recv_string
-        puts "GameTable command: #{command}"
-        if command[0..5] == "RENAME"
-          @table_name = command[7..-1]
-          @socket.send_string("RENAME OK")
-        else
-          process(command)
-        end
-        break if command == "DESTROY"
-      end # loop
-    end # thread
-  end
-
-  def process
-    raise "process needs to be overridden"
-  end
-
-  def close
-    @thread.kill if @thread
-    @socket.close if @socket
-  end
-
-end
-
 if __FILE__ == $0
-  puts "This file does nothing itself. You have to derive a new server from it. See main.rb"
+  puts "This file does nothing itself. See main.rb"
 end
 

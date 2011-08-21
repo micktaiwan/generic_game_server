@@ -3,13 +3,16 @@
 require './game_server.rb'
 Thread.abort_on_exception = true
 
-s = GameServer.new
-trap("INT") { s.close; exit } # testing....
+s = GameServer.new(5000)
+#trap("INT") { s.close; exit } # testing....
 
 begin
   s.listen
 rescue Interrupt => e # FIXME: not catching Ctrl-C ???
   puts
+rescue Exception => e # FIXME: not catching Ctrl-C ???
+  puts e.message
+  puts e.backtrace
 ensure
   puts "Closing..."
   s.close

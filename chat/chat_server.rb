@@ -1,9 +1,11 @@
-class Chat < GameTable
+require './game_table.rb'
 
-  def initialize(port)
-    super(port)
+class Chat < GameTableServer
+
+  def initialize(port, name)
+    super(port, name)
     @game_type  = "Chat"
-    @nb_port    = 2
+    @nb_ports   = 2
     @context    = ZMQ::Context.new
     @puller     = nil
     @publisher  = nil

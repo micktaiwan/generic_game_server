@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
-require './chat_base.rb'
+require './chat_client.rb'
 
-class ChatDisplay < ChatBase
+class ChatDisplay < ChatClient
 
   def intialize(name)
     super(name)
@@ -9,10 +9,11 @@ class ChatDisplay < ChatBase
 
   def connect_to_table(name)
     super(name)
+    t = get_local_table(name)
+    raise "#{name} does not exist" if not t
     @subscriber   = @context.socket(ZMQ::SUB)
-    #@subscriber.connect("tcp://#@server_ip:#{@table_port+2}") # FIXME
-    @subscriber.connect("tcp://#@server_ip:5003")
-    @subscriber.setsockopt(ZMQ::SUBSCRIBE, "")
+    @subscriber.connect("tcp://#@server_ip:#{t.port+2}")
+    puts "connected to tcp://#@server_ip:#{t.port+2}"
   end
 
   def loop
@@ -21,10 +22,20 @@ class ChatDisplay < ChatBase
     end
   end
 
+  def close
+    @subscriber.close
+    super
+  end
+
+
 end
 
-c = ChatDisplay.new("ChatDisplay")
-c.connect
-c.connect_to_table("Lobby") # FIXME: must be the first table on port 5001 (5003 for display)
-c.loop
+begin
+  c = ChatDisplay.new("localhost", 5000, "ChatDisplay")
+  c.connect
+  c.connect_to_table("Lobby")
+  c.loop
+ensure
+  c.close
+end
 
