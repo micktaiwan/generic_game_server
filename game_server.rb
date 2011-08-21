@@ -13,6 +13,7 @@ class GameServer
 
   def initialize(port)
     puts "ffi-rzmq version #{ZMQ::version}"
+    @running      = true
     @tables       = []
     @taken_ports  = []
     @server_port  = port
@@ -31,13 +32,14 @@ class GameServer
   end
 
   def close
+    @running = false
     @socket.close
     @tables.each { |t| t.close }
     @context.terminate
   end
 
   def listen
-    while true
+    while @running
       parse(@socket.recv_string)
     end # loop
   end

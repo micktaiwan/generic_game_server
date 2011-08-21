@@ -46,8 +46,8 @@ class GameTableServer < GameTable
   end
 
   def close
-    @thread.kill if @thread
     @socket.close if @socket
+    @thread.kill if @thread
   end
 
 end

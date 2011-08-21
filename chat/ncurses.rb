@@ -12,18 +12,11 @@ class ChatUI < ChatClient
     Ncurses.initscr
     r,c = [],[]
     Ncurses.getmaxyx(Ncurses.stdscr,r,c)
-    x = 0
-    y = 0
-    h = r[0]-3
-    w = c[0]-2
+    x = 0;    y = 0;      h = r[0]-3; w = c[0]-2
     @win = Ncurses.newwin(h, w, y, x)
-    x = 0
-    y = r[0]-3
-    h = 3
-    w = c[0]-2
+    x = 0;    y = r[0]-3; h = 3;      w = c[0]-2;
     @win.scrollok(true)
     Ncurses.noecho
-    #@win.wrefresh
     @win.wprintw("Connecting...\n")
     @win.wrefresh
     connect
@@ -36,23 +29,19 @@ class ChatUI < ChatClient
   end
 
   def close
-    if @win
-      Ncurses.delwin(@win)
-      @win = nil
-    end
-    if @input
-      Ncurses.delwin(@input)
-      @input = nil
-    end
-    Ncurses.endwin
-    @subscriber.close if @subscriber
+    Ncurses.delwin(@win)    if @win
+    Ncurses.delwin(@input)  if @input
+    Ncurses.endwin          if defined?(Ncurses.endwin)
+    @subscriber.close       if @subscriber
+    @listening_thread.kill  if @listening_thread
+    @pusher.close           if @pusher
     super
   end
 
   def loop
     # listening thread
-    Thread.new do
-      while true
+    @listening_thread = Thread.new do
+      while !Thread.current.stop?
         @win.wprintw(@subscriber.recv_string)
         @win.wrefresh
         @input.wrefresh
@@ -84,19 +73,18 @@ class ChatUI < ChatClient
 end
 
 begin
-  print "name: "
+  print "Your display name: "
   name = gets.chomp
-
   win = ChatUI.new("localhost",5000,name)
   win.init
   win.loop
 rescue Interrupt => e
   puts 'Interrupted'
 rescue Exception => e
-  win.close if win
   puts e
   puts e.backtrace
 ensure
   win.close if win
+  puts 'Ending OK'
 end
 

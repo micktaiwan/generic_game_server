@@ -4,6 +4,7 @@ require 'ffi-rzmq'
 class GenericClient
 
   def initialize(ip, port, name="Generic client")
+    Thread.abort_on_exception = true
     @server_ip      = ip
     @server_port    = port
     @client_name    = name
