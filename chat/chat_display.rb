@@ -13,6 +13,7 @@ class ChatDisplay < ChatClient
     raise "#{name} does not exist" if not t
     @subscriber   = @context.socket(ZMQ::SUB)
     @subscriber.connect("tcp://#@server_ip:#{t.port+2}")
+    @subscriber.setsockopt(ZMQ::SUBSCRIBE, "")
     puts "connected to tcp://#@server_ip:#{t.port+2}"
   end
 
@@ -23,7 +24,7 @@ class ChatDisplay < ChatClient
   end
 
   def close
-    @subscriber.close
+    @subscriber.close if @subscriber
     super
   end
 
@@ -32,7 +33,7 @@ end
 begin
   c = ChatDisplay.new("localhost", 5000, "ChatDisplay")
   c.connect
-  c.connect_to_table("Lobby fails")
+  c.connect_to_table("Lobby")
   c.loop
 ensure
   c.close

@@ -13,13 +13,18 @@ class ChatClient < GenericClient
     rv = @server_socket.recv_string
     puts rv and exit if rv[0..4] == "ERROR"
     port     = rv.split(" ")[1].to_i
-    return add_table(port,name)
+    table = add_table(port,name)
+    table.table_socket.send_string("RENAME #{name}")
+    puts table.table_socket.recv_string
+    return table
   end
 
   def connect_to_table(name, create_if_necessary = false)
+    # First get the table if already cached
     table = get_local_table(name)
     return table if table
 
+    # Then see if the table is already created on the server
     request_all_game_tables
     tmp, tables = recv_string.split(' ')
     puts tables
@@ -45,7 +50,7 @@ private
     tables.each { |t|
       type, t = t.split('.')
       n, p = t.split(':')
-      return {:port=> p.to_i, :name=>n} if n = name
+      return {:port=> p.to_i, :name=>n} if n == name
       }
     return nil
   end
